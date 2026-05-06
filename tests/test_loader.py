@@ -28,3 +28,17 @@ def test_build_restaurants_parses_hours():
     assert r.name == "Test Cafe"
     assert r.raw_hours == "Mon-Fri 7 am - 3 pm"
     assert len(r.intervals) == 5  # Monday through Friday
+
+
+REAL_CSV = Path(__file__).parent.parent / "restaurants.csv"
+
+
+@pytest.mark.skipif(not REAL_CSV.exists(), reason="real CSV not present in this environment")
+def test_real_csv_parses_without_errors():
+    rows = load_csv(str(REAL_CSV))
+    assert len(rows) == 40  # The take-home CSV has 40 restaurants.
+    restaurants = build_restaurants(rows)
+    assert len(restaurants) == 40
+    # Every restaurant should produce at least one interval.
+    for r in restaurants:
+        assert r.intervals, f"{r.name!r} parsed to zero intervals"
