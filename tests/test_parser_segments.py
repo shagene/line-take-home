@@ -1,6 +1,7 @@
 import pytest
 
-from app.parser import parse_segment, split_segments
+from app.intervals import Interval
+from app.parser import build_intervals, parse_segment, split_segments
 
 
 def test_split_segments_single_returns_one():
@@ -57,3 +58,17 @@ def test_parse_segment_overnight_close():
 def test_parse_segment_rejects_missing_dash():
     with pytest.raises(ValueError):
         parse_segment("Mon 11 am 10 pm")
+
+
+def test_build_intervals_same_day_single():
+    intervals = build_intervals([0], 660, 1320, "Mon 11 am - 10 pm")
+    assert intervals == [Interval(660, 1320, "Mon 11 am - 10 pm")]
+
+
+def test_build_intervals_same_day_multiple():
+    intervals = build_intervals([0, 1, 2], 660, 1320, "Mon-Wed 11 am - 10 pm")
+    assert intervals == [
+        Interval(660, 1320, "Mon-Wed 11 am - 10 pm"),
+        Interval(2100, 2760, "Mon-Wed 11 am - 10 pm"),
+        Interval(3540, 4200, "Mon-Wed 11 am - 10 pm"),
+    ]

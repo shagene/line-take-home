@@ -1,5 +1,7 @@
 import re
 
+from app.intervals import Interval, WEEK_MINUTES, to_week_minute
+
 _TIME_PATTERN = re.compile(
     r"^\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\s*$",
     flags=re.IGNORECASE,
@@ -115,3 +117,28 @@ def parse_segment(s: str) -> tuple[list[int], int, int]:
     close_time = parse_time(close_str)
     days = expand_days(day_expr)
     return days, open_time, close_time
+
+
+def build_intervals(
+    day_indices: list[int],
+    open_time: int,
+    close_time: int,
+    source: str,
+) -> list[Interval]:
+    """Build normalized week-minute intervals from a parsed segment.
+
+    Same-day case: close > open. One Interval per day.
+    Overnight case: close <= open. (Handled in Task 10.)
+    Sunday wraparound case: overnight on Sunday spills past WEEK_MINUTES.
+    (Handled in Task 11.)
+    """
+    intervals: list[Interval] = []
+    for day in day_indices:
+        if close_time > open_time:
+            start = to_week_minute(day, open_time)
+            end = to_week_minute(day, close_time)
+            intervals.append(Interval(start, end, source))
+        else:
+            # Overnight or zero-length — implemented in Task 10.
+            raise NotImplementedError("overnight handling added in Task 10")
+    return intervals
