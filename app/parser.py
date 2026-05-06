@@ -147,3 +147,12 @@ def build_intervals(
         else:
             intervals.append(Interval(start, to_week_minute(day + 1, close_time), source))
     return intervals
+
+
+def parse_hours(s: str) -> list[Interval]:
+    """Top-level: parse a complete hours string into normalized intervals."""
+    intervals: list[Interval] = []
+    for segment in split_segments(s):
+        days, open_time, close_time = parse_segment(segment)
+        intervals.extend(build_intervals(days, open_time, close_time, segment))
+    return intervals
