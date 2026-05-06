@@ -72,3 +72,15 @@ def expand_days(s: str) -> list[int]:
         else:
             result.append(_day_index(part))
     return result
+
+
+def split_segments(s: str) -> list[str]:
+    """Split 'A / B / C' into ['A', 'B', 'C'], stripped of whitespace.
+
+    A solitary string with no '/' returns a single-element list.
+    Empty segments (caused by '//' or trailing slashes) raise ValueError.
+    """
+    parts = [p.strip() for p in s.split("/")]
+    if any(p == "" for p in parts):
+        raise ValueError(f"empty segment in hours string: {s!r}")
+    return parts
