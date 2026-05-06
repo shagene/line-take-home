@@ -92,3 +92,22 @@ def test_build_intervals_overnight_all_week():
         Interval(7860, 8880, "Mon-Sat 11 am - 4 am"),    # Sat 11:00 → Sun 04:00
     ]
     assert intervals == expected
+
+
+def test_build_intervals_sunday_wraparound():
+    # Sun 8 pm - 2 am → splits into Sunday 20:00 → 10080 and Monday 00:00 → 02:00.
+    intervals = build_intervals([6], 1200, 120, "Sun 8 pm - 2 am")
+    assert intervals == [
+        Interval(8640 + 1200, 10080, "Sun 8 pm - 2 am"),  # Sun 20:00 → end of week
+        Interval(0, 120, "Sun 8 pm - 2 am"),               # Mon 00:00 → 02:00
+    ]
+
+
+def test_build_intervals_seoul_116_full_week():
+    # Mon-Sun 11 am - 4 am: Sunday's overnight wraps to Monday.
+    intervals = build_intervals([0, 1, 2, 3, 4, 5, 6], 660, 240, "Mon-Sun 11 am - 4 am")
+    # Monday through Saturday: same as Task 10 expected (each is overnight to next day).
+    # Sunday: Sun 11:00 → end of week, then Mon 00:00 → 04:00.
+    assert Interval(8640 + 660, 10080, "Mon-Sun 11 am - 4 am") in intervals
+    assert Interval(0, 240, "Mon-Sun 11 am - 4 am") in intervals
+    assert len(intervals) == 8  # 6 normal + 2 from Sunday wraparound
