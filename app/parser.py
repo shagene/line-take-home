@@ -128,17 +128,19 @@ def build_intervals(
     """Build normalized week-minute intervals from a parsed segment.
 
     Same-day case: close > open. One Interval per day.
-    Overnight case: close <= open. (Handled in Task 10.)
-    Sunday wraparound case: overnight on Sunday spills past WEEK_MINUTES.
-    (Handled in Task 11.)
+    Overnight case: close <= open. End time belongs to the next day, so the
+    interval becomes [start, start + (1440 - open + close)).
+    Sunday wraparound case is handled in Task 11.
     """
     intervals: list[Interval] = []
     for day in day_indices:
+        start = to_week_minute(day, open_time)
         if close_time > open_time:
-            start = to_week_minute(day, open_time)
             end = to_week_minute(day, close_time)
-            intervals.append(Interval(start, end, source))
         else:
-            # Overnight or zero-length — implemented in Task 10.
-            raise NotImplementedError("overnight handling added in Task 10")
+            # Overnight: closing time is the next day. Compute end as
+            # (next_day_start + close_time). Sunday wraparound is split
+            # in Task 11; here end may exceed WEEK_MINUTES temporarily.
+            end = to_week_minute(day + 1, close_time)
+        intervals.append(Interval(start, end, source))
     return intervals

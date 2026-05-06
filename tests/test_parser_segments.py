@@ -72,3 +72,23 @@ def test_build_intervals_same_day_multiple():
         Interval(2100, 2760, "Mon-Wed 11 am - 10 pm"),
         Interval(3540, 4200, "Mon-Wed 11 am - 10 pm"),
     ]
+
+
+def test_build_intervals_overnight_simple():
+    # Mon 5 pm - 1:30 am → Monday 17:00 → Tuesday 01:30
+    intervals = build_intervals([0], 1020, 90, "Mon 5 pm - 1:30 am")
+    assert intervals == [Interval(1020, 1530, "Mon 5 pm - 1:30 am")]
+
+
+def test_build_intervals_overnight_all_week():
+    # Seoul 116 case: Mon-Sun 11 am - 4 am.
+    intervals = build_intervals([0, 1, 2, 3, 4, 5], 660, 240, "Mon-Sat 11 am - 4 am")
+    expected = [
+        Interval(660, 1680, "Mon-Sat 11 am - 4 am"),     # Mon 11:00 → Tue 04:00
+        Interval(2100, 3120, "Mon-Sat 11 am - 4 am"),    # Tue 11:00 → Wed 04:00
+        Interval(3540, 4560, "Mon-Sat 11 am - 4 am"),    # Wed 11:00 → Thu 04:00
+        Interval(4980, 6000, "Mon-Sat 11 am - 4 am"),    # Thu 11:00 → Fri 04:00
+        Interval(6420, 7440, "Mon-Sat 11 am - 4 am"),    # Fri 11:00 → Sat 04:00
+        Interval(7860, 8880, "Mon-Sat 11 am - 4 am"),    # Sat 11:00 → Sun 04:00
+    ]
+    assert intervals == expected
