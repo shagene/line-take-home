@@ -1,6 +1,6 @@
 import pytest
 
-from app.parser import split_segments
+from app.parser import parse_segment, split_segments
 
 
 def test_split_segments_single_returns_one():
@@ -35,3 +35,25 @@ def test_split_segments_tolerates_extra_whitespace():
 def test_split_segments_rejects_empty_segment():
     with pytest.raises(ValueError):
         split_segments("Mon 11 am - 10 pm //  Tue 5 pm - 11 pm")
+
+
+def test_parse_segment_simple_day():
+    assert parse_segment("Mon 11 am - 10 pm") == ([0], 660, 1320)
+
+
+def test_parse_segment_simple_range():
+    assert parse_segment("Mon-Fri 11 am - 10 pm") == ([0, 1, 2, 3, 4], 660, 1320)
+
+
+def test_parse_segment_comma_groups():
+    assert parse_segment("Mon-Thu, Sun 11:30 am - 10 pm") == ([0, 1, 2, 3, 6], 690, 1320)
+
+
+def test_parse_segment_overnight_close():
+    # Closing time before opening — overnight (handled later in build_intervals).
+    assert parse_segment("Mon 5 pm - 1:30 am") == ([0], 1020, 90)
+
+
+def test_parse_segment_rejects_missing_dash():
+    with pytest.raises(ValueError):
+        parse_segment("Mon 11 am 10 pm")

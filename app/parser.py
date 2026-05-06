@@ -84,3 +84,34 @@ def split_segments(s: str) -> list[str]:
     if any(p == "" for p in parts):
         raise ValueError(f"empty segment in hours string: {s!r}")
     return parts
+
+
+_SEGMENT_TIME_PATTERN = re.compile(
+    r"\d{1,2}(?::\d{2})?\s*(?:am|pm)",
+    flags=re.IGNORECASE,
+)
+
+
+def parse_segment(s: str) -> tuple[list[int], int, int]:
+    """Parse one schedule segment like 'Mon-Fri 11 am - 10 pm'.
+
+    Returns (day_indices, open_time_minutes, close_time_minutes).
+    Times are minutes-of-day (0..1439). Overnight handling (close <= open)
+    happens later, in build_intervals.
+    """
+    times = _SEGMENT_TIME_PATTERN.findall(s)
+    if len(times) != 2:
+        raise ValueError(f"expected exactly two times in segment: {s!r}")
+    open_str, close_str = times
+    # Find where the time range starts so we can isolate the day expression.
+    lower = s.lower()
+    open_idx = lower.find(open_str.lower())
+    close_idx = lower.find(close_str.lower(), open_idx + len(open_str))
+    between = s[open_idx + len(open_str) : close_idx]
+    if "-" not in between:
+        raise ValueError(f"expected '-' between open and close times in segment: {s!r}")
+    day_expr = s[:open_idx].rstrip(" -")
+    open_time = parse_time(open_str)
+    close_time = parse_time(close_str)
+    days = expand_days(day_expr)
+    return days, open_time, close_time
