@@ -54,3 +54,13 @@ def test_api_includes_overnight_match(client_with_fixture):
     r = client_with_fixture.get("/api/restaurants/open?datetime=2026-05-04T22:30:00")
     assert r.status_code == 200
     assert "Late Bar" in r.json()
+
+
+def test_api_invalid_datetime_returns_422(client_with_fixture):
+    r = client_with_fixture.get("/api/restaurants/open?datetime=not-a-date")
+    assert r.status_code == 422
+
+
+def test_api_missing_datetime_returns_422(client_with_fixture):
+    r = client_with_fixture.get("/api/restaurants/open")
+    assert r.status_code == 422
