@@ -33,3 +33,22 @@ def test_expand_days_simple_ranges(input_str, expected):
 def test_expand_days_rejects_unknown_token():
     with pytest.raises(ValueError):
         expand_days("Funday")
+
+
+@pytest.mark.parametrize("input_str, expected", [
+    ("Fri-Mon", [4, 5, 6, 0]),
+    ("Sat-Tue", [5, 6, 0, 1]),
+    ("Sun-Mon", [6, 0]),
+])
+def test_expand_days_circular_ranges(input_str, expected):
+    assert expand_days(input_str) == expected
+
+
+@pytest.mark.parametrize("input_str, expected", [
+    ("Mon, Wed-Sun", [0, 2, 3, 4, 5, 6]),
+    ("Mon-Thu, Sun", [0, 1, 2, 3, 6]),
+    ("Tues-Fri, Sun", [1, 2, 3, 4, 6]),
+    ("Mon, Wed, Fri", [0, 2, 4]),
+])
+def test_expand_days_comma_groups(input_str, expected):
+    assert expand_days(input_str) == expected
