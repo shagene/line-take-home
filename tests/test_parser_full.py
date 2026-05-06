@@ -31,3 +31,14 @@ def test_parse_hours_omitted_day_produces_no_interval():
     days_seen = sorted({i.start_week_minute // 1440 for i in intervals})
     # Tuesday (1) is omitted.
     assert days_seen == [0, 2, 3, 4, 5, 6]
+
+
+def test_parse_hours_closes_at_midnight_means_end_of_day():
+    intervals = parse_hours("Mon-Sun 5 pm - 12 am")
+    assert len(intervals) == 7
+    for i in intervals:
+        # Each interval should close exactly at the next day's midnight.
+        day = i.start_week_minute // 1440
+        assert i.start_week_minute == day * 1440 + 17 * 60
+        expected_end = 10080 if day == 6 else (day + 1) * 1440
+        assert i.end_week_minute == expected_end
