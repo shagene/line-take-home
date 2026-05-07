@@ -64,3 +64,35 @@ def test_api_invalid_datetime_returns_422(client_with_fixture):
 def test_api_missing_datetime_returns_422(client_with_fixture):
     r = client_with_fixture.get("/api/restaurants/open")
     assert r.status_code == 422
+
+
+def test_api_rejects_timezone_aware_offset(client_with_fixture):
+    r = client_with_fixture.get(
+        "/api/restaurants/open",
+        params={"datetime": "2026-05-04T08:00:00+05:00"},
+    )
+    assert r.status_code == 422
+
+
+def test_api_rejects_utc_z_suffix(client_with_fixture):
+    r = client_with_fixture.get(
+        "/api/restaurants/open",
+        params={"datetime": "2026-05-04T08:00:00Z"},
+    )
+    assert r.status_code == 422
+
+
+def test_api_rejects_date_only(client_with_fixture):
+    r = client_with_fixture.get(
+        "/api/restaurants/open",
+        params={"datetime": "2026-05-04"},
+    )
+    assert r.status_code == 422
+
+
+def test_api_rejects_space_separator(client_with_fixture):
+    r = client_with_fixture.get(
+        "/api/restaurants/open",
+        params={"datetime": "2026-05-04 08:00:00"},
+    )
+    assert r.status_code == 422
