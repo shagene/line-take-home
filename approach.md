@@ -29,20 +29,20 @@ The implementation stays focused on the required API, but the design leaves a cl
 Required endpoint:
 
 ```text
-GET /api/restaurants/open?datetime=2026-05-06T21:30:00
+GET /api/restaurants/open?datetime=2026-05-06T10:45:00
 ```
 
-Required response shape:
+Required response shape (Wednesday 10:45 AM against the supplied CSV):
 
 ```json
 [
-  "The Cowfish Sushi Burger Bar",
-  "Morgan St Food Hall",
-  "Death and Taxes"
+  "Dashi",
+  "Mez Mexican",
+  "Tupelo Honey"
 ]
 ```
 
-The endpoint returns a list of restaurant names. If no restaurants are open, it returns an empty list.
+The endpoint returns a sorted list of restaurant names. If no restaurants are open, it returns an empty list.
 
 The assignment assumptions are preserved:
 
@@ -241,16 +241,16 @@ The parser should be strict enough to be predictable, but flexible enough to han
 Primary endpoint:
 
 ```text
-GET /api/restaurants/open?datetime=2026-05-06T21:30:00
+GET /api/restaurants/open?datetime=2026-05-06T10:45:00
 ```
 
-Response:
+Response (Wednesday 10:45 AM):
 
 ```json
 [
-  "Caffe Luna",
-  "Death and Taxes",
-  "Seoul 116"
+  "Dashi",
+  "Mez Mexican",
+  "Tupelo Honey"
 ]
 ```
 
@@ -259,6 +259,8 @@ Error behavior:
 ```text
 Missing datetime -> 422
 Invalid datetime -> 422
+Timezone-aware datetime -> 422  (the contract is local time only)
+Date-only string (no T) -> 422
 No restaurants open -> 200 with []
 ```
 
@@ -306,6 +308,21 @@ Dockerfile
 I would not start with SQL for this assignment. The CSV is static, small, and provided as input. Loading into memory at startup is simpler, easier to review, and fully satisfies the requirement.
 
 If this became a managed product with uploads, dataset versioning, or multiple tenants, then SQL would become appropriate.
+
+---
+
+## User Personas
+
+Six users shape the design. Each one maps to specific decisions elsewhere in this document and to a block of tests in `tests/test_personas.py`.
+
+- **Marcus — hungry customer.** Wants to know what's open *right now*. Justifies the minimal query shape (`GET /api/restaurants/open?datetime=...`) and the choice to return just a list of names rather than full schedules. He never asks "what hours does this place keep" — only "is it open."
+- **Priya — late-night planner.** Asks "what's open at 1 a.m. on Saturday?" She is why the parser and engine treat overnight intervals and Sunday-to-Monday wraparound as first-class cases, why the week-minute encoding splits week-crossing intervals at the boundary, and why `[start, end)` half-open semantics are explicit and tested rather than left implicit.
+- **Leo — frontend developer.** Will build a UI on top of the API. He is why the response contract is rigid: a sorted JSON array of strings, `200 []` for no matches (never `404`), `422` with field-level errors for malformed input, and stable behavior at boundaries so the UI doesn't flicker around opening minutes.
+- **Hannah — weekend dinner-only.** Plans Saturday lunch and discovers Garland (`Sat 5:30 pm - 11 pm`), David's Dumpling (`Sun 5:30 pm - 10 pm`), and Top of the Hill (`Sat 5 pm - 9 pm`) open only for dinner on those weekend days. She is why per-day asymmetry inside a multi-segment schedule must resolve exactly: a query at Sat 12:30 pm has to exclude Garland while keeping Mami Nora's (`Sat 11 am - 10 pm`) open. Sloppy day-grouping silently breaks her.
+- **Aiden — weekend early-bird.** Wants breakfast at Sat 8 am. Char Grill (`Sat-Sun 7 am - 3 pm`), Mez Mexican (`Sat-Sun 10 am - 9:30 pm`), and Dashi (`Sat-Sun 9:30 am - 9:30 pm`) open earlier on weekends than weekdays — sometimes only on weekends. He proves multi-segment schedules with weekend-specific open times resolve correctly.
+- **Dana — Tuesday-night planner.** Centro (`Mon, Wed-Sun 11 am - 10 pm`) is closed Tuesdays. Dana's query at Tue 7 pm has to exclude Centro while keeping its Wednesday-open neighbors. She makes "comma-then-range with a skipped day" a behavioral test rather than a parser-internal one.
+
+Every behavioral test traces back to one of these users. If a feature can't be motivated by one of them, it's out of scope for this submission.
 
 ---
 
@@ -365,7 +382,7 @@ docker run -p 8000:8000 restaurant-hours-api
 Then:
 
 ```text
-GET http://localhost:8000/api/restaurants/open?datetime=2026-05-06T21:30:00
+GET http://localhost:8000/api/restaurants/open?datetime=2026-05-06T10:45:00
 ```
 
 Docker is a useful bonus because the prompt explicitly calls it out.

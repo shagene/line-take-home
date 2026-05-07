@@ -6,37 +6,31 @@ The implementation is intentionally focused on the required endpoint. See [Desig
 
 ## Quick Start
 
-### With Docker
+Everything runs in Docker — no local Python setup required.
+
+Build the image once:
 
 ```bash
 docker build -t restaurant-hours-api .
+```
+
+Run the server:
+
+```bash
 docker run -p 8000:8000 restaurant-hours-api
 ```
 
-In another terminal:
+Run the tests:
+
+```bash
+docker run --rm restaurant-hours-api pytest
+```
+
+With the server running, query the endpoint in another terminal:
 
 ```bash
 curl "http://localhost:8000/api/restaurants/open?datetime=2026-05-06T10:45:00"
 ```
-
-### Local Development
-
-```bash
-python3.12 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ".[dev]"
-
-pytest
-uvicorn app.main:app --reload
-```
-
-In another terminal:
-
-```bash
-curl "http://localhost:8000/api/restaurants/open?datetime=2026-05-06T10:45:00"
-```
-
-Python 3.12 is required.
 
 ## The Endpoint
 
@@ -69,11 +63,13 @@ GET /api/restaurants/open?datetime=2026-05-06T10:45:00
 ### Errors
 
 - `422` if `datetime` is missing or cannot be parsed
+- `422` if `datetime` carries a timezone offset (`Z` or `+HH:MM`) — the contract is local time only
+- `422` if `datetime` is date-only or otherwise lacks the `T` time separator
 - `200` with `[]` if no restaurants match the query (an empty list is not an error)
 
 ### Datetime Format
 
-The `datetime` query parameter is an ISO 8601 local datetime with no timezone offset, for example `2026-05-06T10:45:00`. Pydantic handles parsing and validation automatically; malformed input produces a `422` response with field-level error details.
+The `datetime` query parameter is an ISO 8601 local datetime with a `T` separator and no timezone offset, for example `2026-05-06T10:45:00`. Pydantic enforces the contract; malformed input, timezone-aware values, and date-only strings each produce a `422` response with field-level error details.
 
 Interactive OpenAPI documentation is available at `/docs` (Swagger UI) and `/redoc` once the server is running.
 
@@ -117,7 +113,7 @@ Each interval is stored as a pair of integers measured in minutes from the start
 | Sunday     |    8640     |
 | End of Sun |   10080     |
 
-The full week fits in `[0, 10080)`, which means every value comfortably fits in 14 bits and integer comparison is the only arithmetic the query path needs.
+Query minutes fit in `[0, 10080)`; interval ends may equal `10080` as the exclusive end-of-week boundary (when an interval runs through Sunday 23:59). All values comfortably fit in 14 bits and integer comparison is the only arithmetic the query path needs.
 
 ### Query
 
@@ -207,17 +203,19 @@ pyproject.toml
 
 ### Test Categories
 
-- **Parser unit tests** cover time formats, day expressions, and multi-segment schedule strings in isolation.
-- **Interval engine tests** verify week-minute conversion and half-open `[start, end)` semantics independent of the parser.
-- **API integration tests** exercise the live FastAPI app and are named after user behaviors: `test_open_now_evening`, `test_late_night_overnight_friday`, `test_sunday_brunch`, `test_invalid_datetime_returns_422`, and so on.
-- **Edge case tests** map one-to-one onto the bullets in [Edge Cases](#edge-cases). Each case has at least one assertion.
-- **Property-based tests** use Hypothesis to generate random valid intervals and verify invariants: a query at exactly `start` is open, a query at exactly `end` is closed, every minute inside a contiguous run produces the same answer, and so on.
+- **Parser unit tests** (`tests/test_parser_*.py`) cover time formats, day expressions, segment splitting, and multi-segment schedule strings in isolation. Out-of-range hours and minutes are rejected.
+- **Interval engine tests** (`tests/test_intervals.py`) verify week-minute conversion and half-open `[start, end)` semantics independent of the parser.
+- **Persona integration tests** (`tests/test_personas.py`) exercise the live FastAPI app through six named user scenarios — Marcus (open now), Priya (late-night and Sunday wraparound), Leo (response shape and 422 errors), Hannah (weekend dinner-only), Aiden (weekend early-bird), and Dana (mid-week closed-day gap).
+- **API contract tests** (`tests/test_api.py`) cover the response contract directly: list shape, empty-list behavior, overnight matches, missing/invalid datetime, timezone-aware and date-only rejection.
+- **Edge case tests** (`tests/test_edge_cases.py`) map one-to-one onto the bullets in [Edge Cases](#edge-cases). Each case has at least one assertion.
+- **Real-CSV regression tests** (`tests/test_real_csv_regression.py`) pin specific rows whose schedule shape is uniquely tricky: Beasley's noon close, 42nd Street's Sunday-to-Monday wraparound, Seoul 116's all-week overnight, and The Cheesecake Factory's 12:30 am Saturday boundary.
+- **Property-based tests** (`tests/test_property_based.py`) use Hypothesis to generate random valid intervals and verify boundary invariants: a query at exactly `start` is open, a query at exactly `end` is closed, a query strictly inside the interval is open, and disjoint restaurants match independently.
 
 ### Running Tests
 
 ```bash
-pytest
-pytest --cov=app
+docker run --rm restaurant-hours-api pytest
+docker run --rm restaurant-hours-api pytest --cov=app
 ```
 
 Behavior-named integration tests double as living documentation. Reading the test names tells you what the API promises and who it is for, without having to read implementation code.
@@ -242,7 +240,7 @@ The current implementation is intentionally narrow. If this became a managed pro
 - Richer API response with `next_change_at` for efficient frontend refresh
 - Optional Server-Sent Events for dataset version notifications
 
-These are described in `approach-recommended.md` and would extend the existing parser and query algorithm without changing them.
+These are described in `approach.md` and would extend the existing parser and query algorithm without changing them.
 
 ## License / Attribution
 
