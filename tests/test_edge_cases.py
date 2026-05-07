@@ -1,4 +1,4 @@
-"""Explicit edge case tests covering each case named in approach-recommended.md."""
+"""Explicit edge case tests covering each case named in approach.md."""
 
 import pytest
 
