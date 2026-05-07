@@ -11,18 +11,29 @@ The implementation is intentionally focused on the required endpoint. See [Desig
 ```bash
 docker build -t restaurant-hours-api .
 docker run -p 8000:8000 restaurant-hours-api
+```
 
-curl "http://localhost:8000/api/restaurants/open?datetime=2026-05-06T21:30:00"
+In another terminal:
+
+```bash
+curl "http://localhost:8000/api/restaurants/open?datetime=2026-05-06T10:45:00"
 ```
 
 ### Local Development
 
 ```bash
-pip install -e .
-uvicorn app.main:app --reload
-pytest
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
 
-curl "http://localhost:8000/api/restaurants/open?datetime=2026-05-06T21:30:00"
+pytest
+uvicorn app.main:app --reload
+```
+
+In another terminal:
+
+```bash
+curl "http://localhost:8000/api/restaurants/open?datetime=2026-05-06T10:45:00"
 ```
 
 Python 3.12 is required.
@@ -37,8 +48,8 @@ Python 3.12 is required.
 
 Example:
 
-```
-GET /api/restaurants/open?datetime=2026-05-06T21:30:00
+```text
+GET /api/restaurants/open?datetime=2026-05-06T10:45:00
 ```
 
 ### Response
@@ -47,11 +58,13 @@ GET /api/restaurants/open?datetime=2026-05-06T21:30:00
 
 ```json
 [
-  "The Cowfish Sushi Burger Bar",
-  "Morgan St Food Hall",
-  "Death and Taxes"
+  "Dashi",
+  "Mez Mexican",
+  "Tupelo Honey"
 ]
 ```
+
+(Wednesday 10:45 AM — three restaurants serve breakfast or open early enough to be open at this hour.)
 
 ### Errors
 
@@ -60,7 +73,7 @@ GET /api/restaurants/open?datetime=2026-05-06T21:30:00
 
 ### Datetime Format
 
-The `datetime` query parameter is an ISO 8601 local datetime with no timezone offset, for example `2026-05-06T21:30:00`. Pydantic handles parsing and validation automatically; malformed input produces a `422` response with field-level error details.
+The `datetime` query parameter is an ISO 8601 local datetime with no timezone offset, for example `2026-05-06T10:45:00`. Pydantic handles parsing and validation automatically; malformed input produces a `422` response with field-level error details.
 
 Interactive OpenAPI documentation is available at `/docs` (Swagger UI) and `/redoc` once the server is running.
 
@@ -148,6 +161,23 @@ The parser and interval engine handle each of the following correctly. Every cas
 - **Closing time of `12 am`.** Treated as next-day midnight (24:00 within the day, not 0:00 of the same day).
 - **Circular day ranges.** `Fri-Mon` expands forward through the week to Fri/Sat/Sun/Mon.
 - **Comma-separated day groups.** `Mon-Thu, Sun` includes both segments; the parser handles arbitrary lists of ranges and singletons.
+
+### Overnight Example
+
+A live query against the included CSV that exercises overnight intervals:
+
+```text
+GET /api/restaurants/open?datetime=2026-05-10T01:00:00
+```
+
+```json
+[
+  "Bonchon",
+  "Seoul 116"
+]
+```
+
+Both restaurants are open at Sunday 1 AM because their Saturday hours extend into Sunday morning (`Bonchon: Sat 3 pm - 1:30 am` and `Seoul 116: Mon-Sun 11 am - 4 am`). Sunday's own hours haven't started yet (Bonchon opens at 3 PM, Seoul 116 at 11 AM).
 
 ## Repository Structure
 
