@@ -1,8 +1,10 @@
 # Restaurant Hours API
 
+[![tests](https://github.com/shagene/line-take-home/actions/workflows/test.yml/badge.svg)](https://github.com/shagene/line-take-home/actions/workflows/test.yml)
+
 A small Python API that answers one question: given a local datetime, which restaurants are open? It reads a CSV of restaurant names paired with human-readable hours strings (e.g. `"Mon-Thu, Sun 11:30 am - 10 pm / Fri-Sat 11:30 am - 11 pm"`), parses those strings once at startup into normalized weekly intervals, and serves a single endpoint that returns the list of restaurants open at the requested datetime. The technical core is the parser-plus-interval engine: messy human hours become integer week-minute ranges, and queries collapse to a single integer comparison.
 
-The implementation is intentionally focused on the required endpoint. See [Design Decisions](#design-decisions) for the trade-off discussion.
+The implementation is intentionally focused on the required endpoint. See [Design Decisions](#design-decisions) for the trade-off discussion, or [approach.md](approach.md) for the full design write-up — personas, parser scope, and product expansion.
 
 ## Quick Start
 
