@@ -39,3 +39,15 @@ def test_parse_time_handles_12_am_and_12_pm(input_str, expected):
 def test_parse_time_rejects_garbage():
     with pytest.raises(ValueError):
         parse_time("not a time")
+
+
+@pytest.mark.parametrize("bad", ["13 pm", "0 am", "0 pm", "13:00 am", "24 am"])
+def test_parse_time_rejects_hour_out_of_12_hour_range(bad):
+    with pytest.raises(ValueError):
+        parse_time(bad)
+
+
+@pytest.mark.parametrize("bad", ["1:60 am", "1:99 am", "11:75 pm"])
+def test_parse_time_rejects_minute_out_of_range(bad):
+    with pytest.raises(ValueError):
+        parse_time(bad)

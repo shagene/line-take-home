@@ -16,6 +16,10 @@ def parse_time(s: str) -> int:
     hour = int(match.group(1))
     minute = int(match.group(2)) if match.group(2) else 0
     suffix = match.group(3).lower()
+    if not 1 <= hour <= 12:
+        raise ValueError(f"hour out of 1..12 range in 12-hour clock: {s!r}")
+    if not 0 <= minute <= 59:
+        raise ValueError(f"minute out of 0..59 range: {s!r}")
     if suffix == "am":
         if hour == 12:
             hour = 0
