@@ -8,5 +8,4 @@ venv
 htmlcov
 .coverage
 docs
-tests
 README.md
